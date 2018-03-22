@@ -16,8 +16,8 @@ def main():
                 tokenIter = check.checkTokens(tokenIter)
             for token in tokenIter:
                 if type(token) == FormatWarning:
-                    print("warning: {0}:{1}: {2}".format(token.line, token.column, token.message))
-                    print("  in file '{0}'".format(token.file))
+                    print("{0}:{1}:{2}: warning: {3}".format(
+                        token.file, token.line, token.column, token.message), file=sys.stderr)
                 else:
                     outfile.write(token.value)
 

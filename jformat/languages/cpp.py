@@ -9,10 +9,13 @@ class CppTokens(Enum):
     BlockComment = 4
     CharLiteral = 5
     StringLiteral = 6
-    PPDirective = 7
-    Syntax = 8
+    IntLiteral = 7
+    PPDirective = 8
+    Syntax = 9
 
 CTokens = CppTokens
+
+__csymbols = ['!','/','~',',','.','<','>','=','-','+',';',':','%','&','|','*','(',')','{','}','[',']','?','\\']
 
 def ctokenizer(filename, file):
     inString = False
@@ -29,15 +32,17 @@ def ctokenizer(filename, file):
     b = None
     c = file.read(1)
     value = ""
-    ttype = CppTokens.Other
+    ttype = None
 
     while True:
-        if c == '': break
-
         consumeChar = True
         yieldToken = False
         id = str.isalnum(c) or c == '_'
         sp = str.isspace(c)
+
+        if c == '':
+            if ttype is not None:
+                yieldToken = True
 
         if inString or inChar:
             if c == '\\':
@@ -76,21 +81,50 @@ def ctokenizer(filename, file):
             if ttype == CppTokens.BlockComment:
                 if c == '*':
                     inBlockComment = True
-                else:
-                    yield Token(filename, line, column - 1, CppTokens.Syntax, b)
-                    consumeChar = False
-            elif ttype == CppTokens.LineComment:
-                if c == '/':
+                elif c == '/':
                     inLineComment = True
                 else:
                     yield Token(filename, line, column - 1, CppTokens.Syntax, b)
                     consumeChar = False
-            if id:
-                ttype = CppTokens.Identifier
-            elif ttype == CppTokens.Identifier:
-                yieldToken = True
-                consumeChar = False
+                    ttype = None
+                    value = str()
 
+            elif ttype == CppTokens.IntLiteral:
+                if not str.isdecimal(c):
+                    if b != '0' or c not in ['x', 'b']:
+                        consumeChar = False
+                        yieldToken = True
+
+            elif ttype == CppTokens.Identifier:
+                if not id:
+                    yieldToken = True
+                    consumeChar = False
+
+            elif ttype is None:
+                if sp:
+                    inWhitespace = True
+                    ttype = CppTokens.Whitespace
+                elif c == '#':
+                    inPPD = True
+                    ttype = CppTokens.PPDirective
+                elif c == '/':
+                    ttype = CppTokens.BlockComment
+                elif c == "'":
+                    ttype = CppTokens.CharLiteral
+                    inChar = True
+                elif c == '"':
+                    ttype = CppTokens.StringLiteral
+                    inString = True
+                elif str.isdecimal(c):
+                    ttype = CppTokens.IntLiteral
+                elif id:
+                    ttype = CppTokens.Identifier
+                elif c in __csymbols:
+                    ttype = CppTokens.Syntax
+                    yieldToken = True
+                else:
+                    ttype = CppTokens.Other
+                    yieldToken = True
 
         if consumeChar:
             value +=c
@@ -98,7 +132,10 @@ def ctokenizer(filename, file):
         if yieldToken:
             yield Token(filename, line, column, ttype, value)
             value = str()
-            ttype = CppTokens.Other
+            ttype = None
+
+        if c == '':
+            break
 
         if consumeChar:
             b = c
@@ -109,20 +146,3 @@ def ctokenizer(filename, file):
                 line += 1
             else:
                 column += 1
-
-
-    # yield Token(filename, 1, 1, CppTokens.Whitespace, "  ")
-    # yield Token(filename, 1, 3, CppTokens.Other, "int")
-    # yield Token(filename, 1, 6, CppTokens.Whitespace, " ")
-    # yield Token(filename, 1, 7, CppTokens.Other, "main")
-    # yield Token(filename, 1, 11, CppTokens.LParen)
-    # yield Token(filename, 1, 12, CppTokens.RParen)
-    # yield Token(filename, 1, 13, CppTokens.Whitespace, " ")
-    # yield Token(filename, 1, 14, CppTokens.LBrace)
-    # yield Token(filename, 1, 15, CppTokens.Whitespace, "\n")
-    # yield Token(filename, 1, 16, CppTokens.Whitespace, "    ")
-    # yield Token(filename, 1, 20, CppTokens.Return)
-    # yield Token(filename, 1, 26, CppTokens.Whitespace, " ")
-    # yield Token(filename, 1, 27, CppTokens.Other, "0")
-    # yield Token(filename, 1, 28, CppTokens.Semicolon)
-    # yield Token(filename, 1, 29, CppTokens.RBrace)

@@ -9,7 +9,6 @@ from ..languages.cpp import ctokenizer, CppTokens
 @language([Languages.C, Languages.Cpp])
 class CopyrightCheck:
 
-    _commentStart = [CppTokens.LineCommentStart, CppTokens.BlockCommentStart]
     _commentFormat = "/* {0} - (c) {1} {2} */\n"
     _commentRegex = re.compile("\\s")
 
@@ -22,9 +21,9 @@ class CopyrightCheck:
         for token in tokens:
             if token.file != self._curfile:
                 self._curfile = token.file
-                if token.value not in self._commentStart:
-                    yield FormatWarning(token.file, token.line, token.column, "Missing copyright specifier.")
-                    yield Token(token.file, token.line, token.column, False, str.format(
+                if token.ttype not in [CppTokens.LineComment, CppTokens.BlockComment]:
+                    yield FormatWarning(token.file, token.line, token.column, "missing copyright specifier")
+                    yield Token(token.file, token.line, token.column, CppTokens.BlockComment, str.format(
                         self._commentFormat, token.file, self._opts["year"], self._opts["author"]
                     ))
             yield token

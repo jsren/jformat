@@ -58,3 +58,6 @@ class Token(object):
     @property
     def ttype(self) -> Enum:
         return self.__ttype
+
+    def __str__(self) -> str:
+        return "<{0}:'{1}'>".format(self.__ttype.name, self.__value.replace('\n', '\\n'))
